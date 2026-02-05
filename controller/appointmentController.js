@@ -26,6 +26,26 @@ exports.createAppointment = async (req, res) => {
 
     const normalizedDate = new Date(date);
 
+    // Calculate expiration time combining date and timeSlot
+    // Format is "09:00 AM", "02:00 PM", etc.
+    let expireDate = new Date(normalizedDate);
+    const [time, modifier] = timeSlot.split(" ");
+    let [hours, minutes] = time.split(":");
+    
+    if (hours === "12") {
+      hours = "00";
+    }
+    
+    if (modifier === "PM") {
+      hours = parseInt(hours, 10) + 12;
+    }
+    
+    // Set hours and minutes to the appointment date
+    expireDate.setHours(hours, minutes, 0, 0);
+    
+    // Add 1 hour buffer after the appointment starts before deleting
+    expireDate.setHours(expireDate.getHours() + 1);
+
     const appointment = new Appointment({
       doctorName,   
       patientName,
@@ -33,6 +53,7 @@ exports.createAppointment = async (req, res) => {
       phoneNumber,
       date: normalizedDate,
       timeSlot,
+      expireAt: expireDate,
     });
 
     await appointment.save();
